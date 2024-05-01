@@ -1,0 +1,58 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker compose reference guide at
+# https://docs.docker.com/go/compose-spec-reference/
+
+# Here the instructions define your application as a service called "server".
+# This service is built from the Dockerfile in the current directory.
+# You can add other services your application may depend on here, such as a
+# database or a cache. For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
+version: '3'
+services:
+  db:
+    #container_name: postgres_container
+    image: postgres:13
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres-data:
+
+  # pgadmin:
+  #   container_name: pgadmin4_container
+  #   image: dpage/pgadmin4
+  #   restart: always
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: hackerrohit6@gmail.com
+  #     PGADMIN_DEFAULT_PASSWORD: Rohit@123
+  #   ports:
+  #     - "5050:80"
+    
+
+
+# version: "3.8"
+# services:
+#   db:
+#     container_name: postgres_container
+#     image: postgres
+#     restart: always
+#     environment:
+#       POSTGRES_USER: root
+#       POSTGRES_PASSWORD: root
+#       POSTGRES_DB: test_db
+#     ports:
+#       - "5432:5432"
+#   pgadmin:
+#     container_name: pgadmin4_container
+#     image: dpage/pgadmin4
+#     restart: always
+#     environment:
+#       PGADMIN_DEFAULT_EMAIL: admin@admin.com
+#       PGADMIN_DEFAULT_PASSWORD: root
+#     ports:
+#       - "5050:80"
