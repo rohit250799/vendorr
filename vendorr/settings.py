@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     #my created apps:
     'vendors',
+    'purchase_orders',
     #rest framework:
     'rest_framework',
 ]
