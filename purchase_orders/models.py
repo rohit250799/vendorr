@@ -19,6 +19,6 @@ class PurchaseOrders(models.Model):
         max_length=8, choices=PurchaseOrderStatus,
         default=PurchaseOrderStatus.PENDING
     )
-    quality_rating = models.FloatField(null=True)
+    quality_rating = models.FloatField(null=True, blank=True)
     issue_date = models.DateTimeField(auto_now=True)
     acknowledgement_date = models.DateTimeField(null=True, auto_now_add=True)
