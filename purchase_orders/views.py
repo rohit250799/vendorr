@@ -1,5 +1,6 @@
 from django.db.models import F
 from .models import PurchaseOrders
+from .signals import update_quality_rating_average
 from .serializers import PurchaseOrderSerializer
 from rest_framework import generics, viewsets, status
 from rest_framework.decorators import action
@@ -39,3 +40,14 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         return Response({
             'on_time_delivery_rate': on_time_delivery_rate,
         })
+    
+    @action(detail=True, methods=['post'])
+    def mark_completed(self, request, pk=None):
+        #pk = purchase_order.id
+        purchase_order = self.get_object()
+        purchase_order.status = 'COMPLETE'
+        purchase_order.save()
+        return Response({
+            'message': 'Purchase order is completed'
+        }, status=status.HTTP_200_OK)
+
