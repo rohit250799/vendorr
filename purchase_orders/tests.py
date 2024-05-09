@@ -4,6 +4,13 @@ from django.utils import timezone
 from .models import PurchaseOrders
 from vendors.models import Vendor
 
+#for the signal handler
+from django.db.models.signals import post_save
+from django.test.utils import override_settings
+from django.core import management
+from vendors.models import Vendor
+from .signals import update_quality_rating_average
+
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -71,3 +78,37 @@ class PurchaseOrdersViewSetTestCase(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'error': 'Vendor ID is required.'})
+
+#testing the signal handler is working
+class SignalHandlerTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Connect the signal handler
+        post_save.connect(update_quality_rating_average, sender=PurchaseOrders)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        # Disconnect the signal handler
+        post_save.disconnect(update_quality_rating_average, sender=PurchaseOrders)
+
+    def setUp(self):
+        # Create some test data
+        self.vendor = Vendor.objects.create(name='Test Vendor')
+        self.purchase_order1 = PurchaseOrders.objects.create(vendor=self.vendor, po_number=23, order_date="2012-3-21", delivery_date="2012-4-11", items={"title": "water bottle", "itemId": 1, "completed": True}, quantity = 25, status='COMPLETE', quality_rating=4)
+        self.purchase_order2 = PurchaseOrders.objects.create(vendor=self.vendor, po_number=17, order_date="2012-3-21", delivery_date="2012-4-11", items={"title": "drink bottle", "itemId": 2, "completed": True}, quantity = 25, status='COMPLETE', quality_rating=3)
+
+    def test_quality_rating_avg_updated(self):
+        # Check initial quality_rating_avg
+        self.assertEqual(self.vendor.quality_rating_avg, 3.5)  # Average of 4 and 3
+
+        # Create a new completed purchase order with a quality rating
+        purchase_order = PurchaseOrders.objects.create(vendor=self.vendor, po_number=45, order_date="2012-3-21", delivery_date="2012-4-11", items={"title": "apple", "itemId": 3, "completed": True}, quantity = 35,status='COMPLETE', quality_rating=5)
+
+        # Refresh the vendor object from the database to get the updated value
+        self.vendor.refresh_from_db()
+
+        # Check if quality_rating_avg is updated correctly
+        self.assertEqual(self.vendor.quality_rating_avg, 4)  # New average of 4, 3, and 5
+
