@@ -1,7 +1,6 @@
 from django.db.models import F
-from django.utils import timezone
 from .models import PurchaseOrders
-from vendors.views import VendorViewSet
+from .signals import update_quality_rating_average
 from .serializers import PurchaseOrderSerializer
 from rest_framework import generics, viewsets, status
 from rest_framework.decorators import action
@@ -51,3 +50,4 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         return Response({
             'message': 'Purchase order is completed'
         }, status=status.HTTP_200_OK)
+

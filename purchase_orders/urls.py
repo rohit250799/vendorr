@@ -7,7 +7,7 @@ from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 router.register('purchase-orders', views.PurchaseOrderViewSet,
                  basename='purchase-order')
-router.register('vendors', VendorViewSet, basename='vendorvs')
+router.register('vendors', VendorViewSet, basename='vendors')
 
 
 urlpatterns = [
@@ -20,5 +20,4 @@ urlpatterns = [
     path('<int:pk>/mark_completed/', views.PurchaseOrderViewSet.as_view({
         'post': 'mark_completed'
     }), name='complete-purchase-order'),
-    
 ]

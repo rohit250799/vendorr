@@ -1,9 +1,10 @@
 from .models import Vendor
+from django.db import models
 from .serializers import VendorSerializer
 from .models import Vendor
 from purchase_orders.models import PurchaseOrders
 
-from rest_framework import generics, viewsets, status
+from rest_framework import generics, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db.models import Avg
@@ -30,26 +31,6 @@ class VendorViewSet(viewsets.ModelViewSet):
         return Response({
             'quality_rating_average': quality_rating_average
         })
-    
-    # @action(detail=True, methods=['post'])
-    # def complete(self, request, vendor_id=None):
-    #     purchase_order = self.get_object()
-    #     quality_rating = request.data.get('quality_rating')
-
-    #     if quality_rating is not None:
-    #         purchase_order.quality_rating = quality_rating
-    #         purchase_order.status = 'COMPLETE'
-    #         purchase_order.save()
-
-    #         vendor = purchase_order.vendor
-    #         vendor.quality_rating_avg = Vendor.update_quality_rating_average()
-
-    #         return Response({
-    #             'status': 'Purchase order completed succesfully.'
-    #         })
-    #     else: return Response({
-    #         'error': 'Quality rating is required'
-    #     }, status=status.HTTP_400_BAD_REQUEST)
 
     def calculate_quality_rating_average(vendor_id):
         completed_purchase_order = PurchaseOrders.objects.filter(
@@ -59,3 +40,30 @@ class VendorViewSet(viewsets.ModelViewSet):
             Avg('quality_rating_avg')
         )['quality_rating_avg__avg']
         return quality_rating_avg        
+
+class QualityRatingAvgViewSet(viewsets.ViewSet):
+    def update_quality_rating_avg(self, request):
+        # Retrieving the vendor assuming its id is provided in request
+        vendor_id = request.data.get('vendor_id')
+        vendor = Vendor.objects.get(id=vendor_id)
+
+        completed_purchase_orders = PurchaseOrders.objects.filter(
+            vendor=vendor,
+            status='COMPLETE',
+            quality_rating__isnull=False
+        )
+
+        total_ratings = completed_purchase_orders.count()
+        total_ratings_sum = completed_purchase_orders.aggregate(
+            models.Sum('quality_rating')
+        )['quality_rating__sum']
+        if total_ratings > 0: average_rating = total_ratings_sum / total_ratings
+        else: average_rating = None
+
+        # Update quality_rating_avg field of the vendor
+        vendor.quality_rating_avg = average_rating
+        vendor.save()
+
+        return Response({
+            'message': 'Quality rating average updated succesfully'
+        })
