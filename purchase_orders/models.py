@@ -12,7 +12,7 @@ class PurchaseOrders(models.Model):
     po_number = models.CharField(unique=True)
     vendor = models.ForeignKey(VendorModel, on_delete=models.CASCADE)
     order_date = models.DateTimeField()
-    delivery_date = models.DateTimeField()
+    delivery_date = models.DateTimeField(blank=True)
     items = models.JSONField()
     quantity = models.IntegerField()
     status = models.CharField(
