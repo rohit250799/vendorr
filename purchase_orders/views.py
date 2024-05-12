@@ -1,4 +1,5 @@
 from django.db.models import F
+from django.utils import timezone
 from .models import PurchaseOrders
 from .signals import update_quality_rating_average
 from .serializers import PurchaseOrderSerializer
@@ -49,5 +50,14 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         purchase_order.save()
         return Response({
             'message': 'Purchase order is completed'
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def mark_acknowledged(self, request, pk=None):
+        purchase_order = self.get_object()
+        purchase_order.acknowledgement_date = timezone.now()
+        purchase_order.save()
+        return Response({
+            'message': 'Purchase order is acknowledged'
         }, status=status.HTTP_200_OK)
 
