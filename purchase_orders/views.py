@@ -1,4 +1,5 @@
-from django.db.models import F
+from django.db.models import F, Avg
+from django.db import models
 from django.utils import timezone
 from .models import PurchaseOrders
 from .signals import update_quality_rating_average
@@ -60,4 +61,13 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         return Response({
             'message': 'Purchase order is acknowledged'
         }, status=status.HTTP_200_OK)
-
+    
+    @action(detail=True, methods=['get'])
+    def average_response_time(self, request):
+        average_time = PurchaseOrders.objects.exclude(
+            acknowledgment_date__isnull=True).aggregate(avg_time=Avg(
+                models.ExpressionWrapper(models.F('acknowledgment_date') - models.F(
+                    'issue_date'), output_field=models.DurationField())))['avg_time']
+        return Response({
+            'average_response_time': average_time.total_seconds() if average_time else None
+        }, status=status.HTTP_200_OK)
