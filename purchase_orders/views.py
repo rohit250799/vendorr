@@ -57,17 +57,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     def mark_acknowledged(self, request, pk=None):
         purchase_order = self.get_object()
         purchase_order.acknowledgement_date = timezone.now()
-        purchase_order.save()
+        purchase_order.save(update_fields=['acknowledgement_date'])
         return Response({
             'message': 'Purchase order is acknowledged'
-        }, status=status.HTTP_200_OK)
-    
-    @action(detail=True, methods=['get'])
-    def average_response_time(self, request):
-        average_time = PurchaseOrders.objects.exclude(
-            acknowledgment_date__isnull=True).aggregate(avg_time=Avg(
-                models.ExpressionWrapper(models.F('acknowledgment_date') - models.F(
-                    'issue_date'), output_field=models.DurationField())))['avg_time']
-        return Response({
-            'average_response_time': average_time.total_seconds() if average_time else None
         }, status=status.HTTP_200_OK)
