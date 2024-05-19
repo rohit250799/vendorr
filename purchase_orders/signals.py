@@ -22,3 +22,17 @@ def update_quality_rating_average(sender, instance, created, **kwargs):
         else: average_rating = None
         vendor.quality_rating_avg = average_rating
         vendor.save()
+
+
+@receiver(post_save, sender=purchase_order)
+def update_average_response_time(sender, instance, created, **kwargs):
+    if created and instance.acknowledgement_date:
+        vendor = instance.vendor
+        total_response_time = vendor.total_response_time + (
+            instance.acknowledgement_date - instance.issue_date
+        ).total_seconds()
+        total_purchase_orders_acknowledged = vendor.purchaseorder_set.filter(
+            acknowledgement_date__isnull=False
+        ).count()
+        vendor.average_response_time = total_response_time / total_purchase_orders_acknowledged
+        vendor.save()

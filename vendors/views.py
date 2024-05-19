@@ -4,10 +4,10 @@ from .serializers import VendorSerializer
 from .models import Vendor
 from purchase_orders.models import PurchaseOrders
 
-from rest_framework import generics, viewsets
+from rest_framework import generics, viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from django.db.models import Avg
+from django.db.models import Avg, F, ExpressionWrapper, DurationField, Func, IntegerField
 
 # Create your views here.
 
@@ -18,6 +18,11 @@ class VendorsList(generics.ListCreateAPIView):
 class VendorsDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Vendor.objects.all()
     serializer_class = VendorSerializer
+
+class ExtractEpoch(Func):
+    function = 'Extract'
+    template = '%(function)s(EPOCH FROM %(expressions)s)'
+    output_field = IntegerField()
 
 class VendorViewSet(viewsets.ModelViewSet):
     queryset = Vendor.objects.all()
@@ -39,7 +44,25 @@ class VendorViewSet(viewsets.ModelViewSet):
         quality_rating_avg = completed_purchase_order.aggregate(
             Avg('quality_rating_avg')
         )['quality_rating_avg__avg']
-        return quality_rating_avg        
+        return quality_rating_avg
+
+    @action(detail=True, methods=['get'])
+    def average_response_time(self, request, pk=None):
+        average_time = PurchaseOrders.objects.exclude(
+            acknowledgement_date__isnull=True).aggregate(avg_time=Avg(
+                models.ExpressionWrapper(models.F('acknowledgement_date') - models.F(
+                    'issue_date'), output_field=models.DurationField())))['avg_time']
+        return Response({
+            'average_response_time': average_time.total_seconds() if average_time else None
+        }, status=status.HTTP_200_OK)    
+
+    def calculate_average_response_time(vendor_id):
+        acknowledged_purchase_order = PurchaseOrders.objects.filter(
+            vendor_id=vendor_id, issue_date__isnull = False
+        )    
+        average_response_time = acknowledged_purchase_order.aggregate(Avg('average_response_time'))['average_response_time__avg']
+        average_response_time_days = average_response_time.total_seconds() / (60*60*24) if average_response_time else None
+        return average_response_time_days
 
 class QualityRatingAvgViewSet(viewsets.ViewSet):
     def update_quality_rating_avg(self, request):
@@ -66,4 +89,36 @@ class QualityRatingAvgViewSet(viewsets.ViewSet):
 
         return Response({
             'message': 'Quality rating average updated succesfully'
+        })
+
+class AverageResponseTimeViewSet(viewsets.ViewSet):
+    def update_average_response_time(self, request):
+        vendor_id = request.data.get('vendor_id')
+        vendor = Vendor.objects.get(id=vendor_id)
+
+        acknowledged_purchase_orders = PurchaseOrders.objects.filter(
+            vendor=vendor,
+            issue_date__isnull = False,
+            acknowledgement_date__isnull = False
+        )
+
+        acknowledged_purchase_orders = acknowledged_purchase_orders.annotate(
+            response_time_seconds = ExpressionWrapper(ExtractEpoch(F('acknowledgement_date') - F('issue_date')), output_field=IntegerField())
+        )
+        
+        average_response_time = acknowledged_purchase_orders.aggregate(avg_response_time = Avg('response_time_seconds'))['avg_response_time']
+
+        def convert_seconds_to_hours(seconds):
+            if seconds is None or seconds < 0: return None
+            seconds = int(seconds)
+            hours, seconds = divmod(seconds, 3600)
+            return hours
+
+        average_response_time_days = average_response_time / (60*60) if average_response_time else None
+
+        vendor.average_response_time = average_response_time_days
+        vendor.save()
+
+        return Response({
+            'message': 'Average response time updated succesfully'
         })
