@@ -20,4 +20,7 @@ urlpatterns = [
     path('<int:pk>/mark_completed/', views.PurchaseOrderViewSet.as_view({
         'post': 'mark_completed'
     }), name='complete-purchase-order'),
+    path('<int:pk>/mark_acknowledged/', views.PurchaseOrderViewSet.as_view({
+        'post': 'mark_acknowledged'
+    }), name='mark_acknowledged'),
 ]
